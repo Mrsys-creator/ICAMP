@@ -15,6 +15,155 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 import io
 
+import urllib.request
+import json
+import threading
+import time
+
+# ============================================
+# 🚀 SISTEMA DE ACTUALIZACIONES AUTOMÁTICAS
+# ============================================
+
+class Actualizador:
+    """Maneja las actualizaciones automáticas del programa"""
+    
+    # ===== ⚙️ CONFIGURACIÓN =====
+    URL_VERSION = "https://raw.githubusercontent.com/Mrsys-creator/ICAMP/refs/heads/main/version.json"
+    VERSION_ACTUAL = "1.0.2"
+    NOMBRE_APP = "Renombrador PDF"
+    
+    @staticmethod
+    def verificar_actualizacion(parent=None):
+        try:
+            req = urllib.request.Request(
+                Actualizador.URL_VERSION,
+                headers={'User-Agent': 'Mozilla/5.0'}
+            )
+            
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode('utf-8'))
+            
+            version_remota = data.get("version", "0.0.0")
+            url_descarga = data.get("app_url", "")
+            mensaje = data.get("mensaje", "Nueva versión disponible")
+            
+            if Actualizador._es_version_mayor(version_remota, Actualizador.VERSION_ACTUAL):
+                respuesta = messagebox.askyesno(
+                    f"📦 {Actualizador.NOMBRE_APP} - Actualización disponible",
+                    f"🔔 Nueva versión **{version_remota}** disponible.\n\n"
+                    f"📌 Cambios:\n{mensaje}\n\n"
+                    f"¿Deseas descargar e instalar la actualización ahora?\n\n"
+                    f"(El programa se reiniciará automáticamente)"
+                )
+                
+                if respuesta:
+                    return Actualizador._descargar_actualizacion(url_descarga, parent)
+            
+            return False
+            
+        except Exception as e:
+            print(f"Error al verificar actualización: {e}")
+            return False
+    
+    @staticmethod
+    def _es_version_mayor(version1, version2):
+        try:
+            v1 = [int(x) for x in version1.split('.')]
+            v2 = [int(x) for x in version2.split('.')]
+            
+            while len(v1) < len(v2):
+                v1.append(0)
+            while len(v2) < len(v1):
+                v2.append(0)
+            
+            for i in range(len(v1)):
+                if v1[i] > v2[i]:
+                    return True
+                elif v1[i] < v2[i]:
+                    return False
+            return False
+        except:
+            return version1 > version2
+    
+    @staticmethod
+    def _descargar_actualizacion(url, parent=None):
+        try:
+            if getattr(sys, 'frozen', False):
+                base_dir = os.path.dirname(sys.executable)
+            else:
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            temp_file = os.path.join(base_dir, "app_nuevo.py")
+            
+            req = urllib.request.Request(
+                url,
+                headers={'User-Agent': 'Mozilla/5.0'}
+            )
+            
+            with urllib.request.urlopen(req, timeout=30) as response:
+                with open(temp_file, 'wb') as f:
+                    while True:
+                        chunk = response.read(8192)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+            
+            app_actual = os.path.join(base_dir, "app.py")
+            
+            backup_file = os.path.join(base_dir, "app_backup.py")
+            if os.path.exists(app_actual):
+                if os.path.exists(backup_file):
+                    os.remove(backup_file)
+                os.rename(app_actual, backup_file)
+            
+            os.rename(temp_file, app_actual)
+            
+            messagebox.showinfo(
+                "✅ Actualización completada",
+                f"La aplicación se ha actualizado correctamente.\n\n"
+                f"El programa se reiniciará automáticamente."
+            )
+            
+            def reiniciar():
+                if getattr(sys, 'frozen', False):
+                    os.execl(sys.executable, sys.executable, *sys.argv)
+                else:
+                    os.execl(sys.executable, sys.executable, *sys.argv)
+            
+            threading.Timer(1.5, reiniciar).start()
+            
+            return True
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo descargar la actualización:\n\n{str(e)}")
+            return False
+
+def verificar_actualizacion_al_inicio():
+    splash = tk.Toplevel()
+    splash.title("")
+    splash.geometry("300x100")
+    splash.overrideredirect(True)
+    
+    screen_width = splash.winfo_screenwidth()
+    screen_height = splash.winfo_screenheight()
+    x = (screen_width - 300) // 2
+    y = (screen_height - 100) // 2
+    splash.geometry(f"+{x}+{y}")
+    
+    tk.Label(
+        splash, 
+        text="🔍 Verificando actualizaciones...", 
+        font=("Arial", 12)
+    ).pack(expand=True)
+    splash.update()
+    
+    def verificar():
+        time.sleep(0.5)
+        splash.destroy()
+        Actualizador.verificar_actualizacion()
+    
+    threading.Thread(target=verificar, daemon=True).start()
+
 # FUNCIÓN: Ordenamiento natural
 def natural_sort_key(s):
     return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', s)]
@@ -122,6 +271,9 @@ class PDFApp:
         self.main_frame = tk.Frame(self.root, width=1000, height=600)
 
         self.crear_menu_inicio()
+    
+        # ===== VERIFICAR ACTUALIZACIONES AL INICIAR =====
+        verificar_actualizacion_al_inicio()
 
     def crear_menu_inicio(self):
         self.canvas_menu = tk.Canvas(self.menu_frame, width=1000, height=600)
