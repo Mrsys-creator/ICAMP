@@ -30,7 +30,7 @@ class Actualizador:
     
     # ===== ⚙️ CONFIGURACIÓN =====
     URL_VERSION = "https://raw.githubusercontent.com/Mrsys-creator/ICAMP/refs/heads/main/version.json"
-    VERSION_ACTUAL = "1.0.2"
+    VERSION_ACTUAL = "1.0.3"
     NOMBRE_APP = "Renombrador PDF"
     
     @staticmethod
