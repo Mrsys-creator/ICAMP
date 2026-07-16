@@ -14,6 +14,7 @@ from tkinter import filedialog, messagebox
 from tkinter import ttk
 from PIL import Image, ImageTk
 import io
+from datetime import datetime
 
 import urllib.request
 import json
@@ -448,28 +449,83 @@ class PDFApp:
     def obtener_pdfs(self, base):
         self.pdfs.clear()
         pdfs_encontrados = []
-        
+        carpetas_omitidas = []
+
         for raiz, dirs, archivos in os.walk(base):
             dirs.sort(key=natural_sort_key)
-            
-            for archivo in archivos:
-                if archivo.lower().endswith(".pdf"):
-                    ruta_pdf = os.path.join(raiz, archivo)
-                    nombre_base = os.path.splitext(archivo)[0]
-                    carpeta_procesada = os.path.join(raiz, nombre_base)
-                    
-                    if not os.path.exists(carpeta_procesada):
-                        pdfs_encontrados.append(ruta_pdf)
-        
+
+            pdfs = [f for f in archivos if f.lower().endswith(".pdf")]
+
+            if len(pdfs) == 1:
+
+                archivo = pdfs[0]
+                ruta_pdf = os.path.join(raiz, archivo)
+
+                nombre_base = os.path.splitext(archivo)[0]
+                carpeta_procesada = os.path.join(raiz, nombre_base)
+
+                if not os.path.exists(carpeta_procesada):
+                    pdfs_encontrados.append(ruta_pdf)
+
+            else:
+                carpetas_omitidas.append(
+                    (os.path.basename(raiz), raiz, len(pdfs))
+                )
+
         pdfs_encontrados.sort(key=natural_sort_key)
+
         self.pdfs = pdfs_encontrados
         self.total_pdfs = len(self.pdfs)
-        
+
+        # Crear reporte de carpetas omitidas
+        if carpetas_omitidas:
+
+            carpeta_reportes = os.path.join(base, "Reportes")
+
+            os.makedirs(carpeta_reportes, exist_ok=True)
+
+            ruta_txt = os.path.join(carpeta_reportes, "Carpetas_Omitidas.txt")
+
+            with open(ruta_txt, "w", encoding="utf-8") as f:
+
+                f.write("REPORTE DE CARPETAS OMITIDAS\n")
+                f.write("=" * 60 + "\n\n")
+                f.write(f"Fecha: {datetime.now():%d/%m/%Y %H:%M:%S}\n\n")
+                f.write(f"Carpetas válidas: {len(self.pdfs)}\n")
+                f.write(f"Carpetas omitidas: {len(carpetas_omitidas)}\n\n")
+
+                for carpeta, ruta, cantidad in carpetas_omitidas:
+
+                    f.write("-" * 60 + "\n")
+                    f.write(f"Carpeta : {carpeta}\n")
+                    f.write(f"Ruta    : {ruta}\n")
+
+                    if cantidad == 0:
+                        f.write("Motivo  : No contiene archivos PDF.\n\n")
+                    else:
+                        f.write(f"Motivo  : Contiene {cantidad} archivos PDF.\n\n")
+
+        continuar = messagebox.askyesno(
+            "Resultado del escaneo",
+            f"Escaneo finalizado.\n\n"
+            f"Carpetas válidas: {len(self.pdfs)}\n"
+            f"Carpetas omitidas: {len(carpetas_omitidas)}\n\n"
+            f"{'Se generó el archivo Carpetas_Omitidas.txt\n\n' if carpetas_omitidas else ''}"
+            f"¿Desea comenzar el procesamiento?"
+        )
+
+        if not continuar:
+            return
+
         self.pdf_index = -1
+
         if self.pdfs:
             self.cargar_siguiente_pdf()
         else:
-            messagebox.showinfo("Info", "No se encontraron PDFs para procesar.")
+            messagebox.showinfo(
+                "Información",
+                "No se encontraron carpetas con un único PDF para procesar."
+            )
 
     def cargar_siguiente_pdf(self):
         self.pdf_index += 1
