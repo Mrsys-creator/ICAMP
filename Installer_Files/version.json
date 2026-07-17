@@ -1,7 +1,7 @@
 {
-    "version": "1.1.0",
+    "version": "1.1.1",
     "mensaje": "Nueva versión con mejoras y actualizaciones",
-    "url_descarga": "https://github.com/Mrsys-creator/ICAMP/releases/download/v1.1.0/RenombradorPDF.exe",
+    "url_descarga": "https://github.com/Mrsys-creator/ICAMP/releases/download/v1.1.1/RenombradorPDF.exe",
     "url_app": "https://raw.githubusercontent.com/Mrsys-creator/ICAMP/main/app.py",
     "nuevas_librerias": [
         "PyMuPDF",
@@ -9,5 +9,5 @@
         "customtkinter",
         "PyPDF2"
     ],
-    "fecha": "2026-07-17 13:03:02"
+    "fecha": "2026-07-17 13:11:33"
 }

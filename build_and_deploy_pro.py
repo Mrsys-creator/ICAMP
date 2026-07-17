@@ -299,16 +299,16 @@ class BuildDeployPro:
     
     # ===== Sincronizar con GitHub AUTOMÁTICAMENTE =====
     def git_sync(self):
-        """Sincroniza automáticamente con GitHub (pull)"""
+        """Sincroniza automáticamente con GitHub (pull normal)"""
         try:
             carpeta = self.ruta_app.get()
-            
+        
             self.log("🔄 Sincronizando con GitHub...", "github")
-            
+        
             # 1. Verificar si hay cambios sin commitear
             status_result = subprocess.run(["git", "status", "--porcelain"], 
                                          cwd=carpeta, capture_output=True, text=True)
-            
+        
             # 2. Si hay cambios, hacer commit
             if status_result.stdout.strip():
                 self.log("📝 Hay cambios locales, guardando...", "info")
@@ -316,22 +316,22 @@ class BuildDeployPro:
                 subprocess.run(["git", "commit", "-m", f"Actualizar antes de build {datetime.now().strftime('%Y-%m-%d %H:%M')}"], 
                              cwd=carpeta, check=True, capture_output=True)
                 self.log("✅ Cambios locales guardados", "success")
-            
-            # 3. Traer cambios de GitHub
+        
+            # 3. Traer cambios de GitHub (SIN --rebase)
             self.log("📥 Descargando cambios de GitHub...", "github")
-            pull_result = subprocess.run(["git", "pull", "origin", "main", "--rebase"], 
+            pull_result = subprocess.run(["git", "pull", "origin", "main"],  # <--- SIN --rebase
                                        cwd=carpeta, capture_output=True, text=True)
-            
+        
             if "Already up to date" in pull_result.stdout:
                 self.log("ℹ️ Ya estás al día con GitHub", "info")
             else:
                 self.log("✅ Cambios descargados de GitHub", "success")
-            
+        
             # 4. Limpiar conflictos automáticamente después del pull
             self.limpiar_conflictos_git()
-            
+        
             return True
-            
+        
         except Exception as e:
             self.log(f"⚠️ Error al sincronizar: {e}", "warning")
             return False
@@ -340,37 +340,38 @@ class BuildDeployPro:
         """Sube los cambios a GitHub automáticamente"""
         try:
             carpeta = self.ruta_app.get()
-            
+        
             self.log("📤 Subiendo cambios a GitHub...", "github")
-            
+        
             # 1. Agregar archivos
             subprocess.run(["git", "add", "app.py", "version.json"], cwd=carpeta, check=True, capture_output=True)
-            
+        
             # 2. Commit
             commit_msg = f"Actualizar a versión {nueva_version}: {self.mensaje_cambios.get() or 'Nueva versión'}"
-            subprocess.run(["git", "commit", "-m", commit_msg], cwd=carpeta, check=True, capture_output=True)
-            self.log(f"✅ Commit creado: {commit_msg}", "success")
-            
-            # 3. Pull antes de push (por si hay cambios remotos)
+            try:
+                subprocess.run(["git", "commit", "-m", commit_msg], cwd=carpeta, check=True, capture_output=True)
+                self.log(f"✅ Commit creado: {commit_msg}", "success")
+            except subprocess.CalledProcessError:
+                self.log("ℹ️ No hay cambios nuevos para commitear", "info")
+                return True
+        
+            # 3. Pull normal (SIN --rebase)
             self.log("📥 Verificando cambios remotos...", "github")
-            subprocess.run(["git", "pull", "origin", "main", "--rebase"], 
-                         cwd=carpeta, check=True, capture_output=True)
-            
+            try:
+                subprocess.run(["git", "pull", "origin", "main"],  # <--- SIN --rebase
+                             cwd=carpeta, check=True, capture_output=True)
+            except:
+                self.log("⚠️ Error en pull, intentando fetch...", "warning")
+                subprocess.run(["git", "fetch", "origin"], cwd=carpeta, check=True, capture_output=True)
+        
             # 4. Push
             self.log("📤 Subiendo a GitHub...", "github")
             subprocess.run(["git", "push", "-u", "origin", "main"], 
                          cwd=carpeta, check=True, capture_output=True)
             self.log("✅ Cambios subidos a GitHub", "success")
-            
+        
             return True
             
-        except subprocess.CalledProcessError as e:
-            if "nothing to commit" in str(e.stderr) or "no changes added" in str(e.stderr):
-                self.log("ℹ️ No hay cambios nuevos para subir", "info")
-                return True
-            else:
-                self.log(f"⚠️ Error en git: {e}", "warning")
-                return False
         except Exception as e:
             self.log(f"⚠️ Error al subir cambios: {e}", "warning")
             return False

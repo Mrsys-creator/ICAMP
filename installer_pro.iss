@@ -1,11 +1,12 @@
 
-; Script de instalación para ICAMP
-; Versión: 1.1.0
+; Script de instalación COMPLETO para ICAMP
+; Versión: 1.1.1
+; Incluye TODOS los archivos necesarios
 
 [Setup]
-AppId={{ICAMP-1-1-0-PRO}}
+AppId={{ICAMP-1-1-1-PRO}}
 AppName=ICAMP
-AppVersion=1.1.0
+AppVersion=1.1.1
 AppPublisher=Mr. Sys
 AppPublisherURL=https://github.com/Mrsys-creator/ICAMP
 AppSupportURL=https://github.com/Mrsys-creator/ICAMP
@@ -14,13 +15,13 @@ DefaultDirName={pf}\ICAMP
 DefaultGroupName=ICAMP
 AllowNoIcons=yes
 OutputDir=C:/Users/USER/Desktop/PRUEBA/ICAMP 1.0.5\Installer_PRO
-OutputBaseFilename=ICAMP_Setup_1.1.0
+OutputBaseFilename=ICAMP_Setup_1.1.1
 SetupIconFile=C:/Users/USER/Desktop/PRUEBA/ICAMP 1.0.5\Installer_Files\tu_icono.ico
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\RenombradorPDF.exe
-UninstallDisplayName=ICAMP 1.1.0
+UninstallDisplayName=ICAMP 1.1.1
 
 [Languages]
 Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -29,27 +30,31 @@ Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+; ===== ARCHIVOS DEL INSTALADOR (TODOS LOS NECESARIOS) =====
 [Files]
 Source: "C:/Users/USER/Desktop/PRUEBA/ICAMP 1.0.5\Installer_Files\RenombradorPDF.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:/Users/USER/Desktop/PRUEBA/ICAMP 1.0.5\Installer_Files\version.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:/Users/USER/Desktop/PRUEBA/ICAMP 1.0.5\Installer_Files\fondo_iess.png"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:/Users/USER/Desktop/PRUEBA/ICAMP 1.0.5\Installer_Files\fondo_issfa.png"; DestDir: "{app}"; Flags: ignoreversion
 
+; ===== ACCESOS DIRECTOS =====
 [Icons]
 Name: "{group}\ICAMP"; Filename: "{app}\RenombradorPDF.exe"
 Name: "{group}\Desinstalar ICAMP"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\ICAMP"; Filename: "{app}\RenombradorPDF.exe"; Tasks: desktopicon
 
+; ===== EJECUCIÓN POST-INSTALACIÓN =====
 [Run]
 Filename: "{app}\RenombradorPDF.exe"; Description: "{cm:LaunchProgram,ICAMP}"; Flags: postinstall nowait skipifsilent
 
+; ===== MENSAJES PERSONALIZADOS =====
 [Messages]
 SpanishWelcomeLabel1=Bienvenido al instalador de ICAMP
-SpanishWelcomeLabel2=Este programa instalará ICAMP versión 1.1.0 en tu sistema.
+SpanishWelcomeLabel2=Este programa instalará ICAMP versión 1.1.1 en tu sistema.
 SpanishReadyLabel1=Listo para instalar ICAMP
 SpanishReadyLabel2=El programa está listo para ser instalado en tu sistema.
 
 EnglishWelcomeLabel1=Welcome to ICAMP Setup
-EnglishWelcomeLabel2=This will install ICAMP version 1.1.0 on your system.
+EnglishWelcomeLabel2=This will install ICAMP version 1.1.1 on your system.
 EnglishReadyLabel1=Ready to install ICAMP
 EnglishReadyLabel2=The program is ready to be installed on your system.
