@@ -49,7 +49,7 @@ from collections import defaultdict
 
 class Actualizador:
     URL_VERSION = "https://raw.githubusercontent.com/Mrsys-creator/ICAMP/main/version.json"
-    VERSION_ACTUAL = "1.1.1"
+    VERSION_ACTUAL = "1.1.2"
     NOMBRE_APP = "_IC@MP_"
     
     # ===== URL DE DESCARGA POR DEFECTO =====
