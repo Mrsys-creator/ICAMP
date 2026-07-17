@@ -1,14 +1,12 @@
 """
-BUILD & DEPLOY PROFESIONAL PARA ICAMP - VERSIÓN AUTOMÁTICA
+BUILD & DEPLOY PROFESIONAL PARA ICAMP - VERSIÓN COMPLETA
 -----------------------------------
-HACE TODO AUTOMÁTICAMENTE:
-1. git pull (trae cambios de GitHub)
-2. Detecta e instala librerías
-3. Actualiza app.py y version.json
-4. Compila EXE
-5. Crea instalador profesional
-6. git commit y git push (sube cambios a GitHub)
-7. Crea release y sube EXE a GitHub
+HACE TODO AUTOMÁTICAMENTE Y SUBE TODO A GITHUB:
+1. app.py (código fuente)
+2. version.json (configuración de actualización)
+3. RenombradorPDF.exe (ejecutable)
+4. ICAMP_Setup_X.X.X.exe (instalador profesional COMPLETO)
+5. Todas las imágenes y recursos
 
 USO: python build_and_deploy_pro.py
 """
@@ -99,7 +97,7 @@ class BuildDeployPro:
         ttk.Button(folder_frame, text="📂 Buscar", command=self.seleccionar_carpeta).pack(side="right")
         
         # Versión
-        ttk.Label(main_frame, text="🔢 Nueva versión (ej: 1.1.2):").pack(anchor="w", pady=(10, 0))
+        ttk.Label(main_frame, text="🔢 Nueva versión (ej: 1.1.1):").pack(anchor="w", pady=(10, 0))
         version_frame = ttk.Frame(main_frame)
         version_frame.pack(fill="x", pady=5)
         self.version_entry = ttk.Entry(version_frame, textvariable=self.nueva_version, width=25)
@@ -133,10 +131,10 @@ class BuildDeployPro:
         opciones_frame.pack(fill="x", pady=10)
         
         self.upload_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(opciones_frame, text="📤 Subir a GitHub", variable=self.upload_var).pack(anchor="w")
+        ttk.Checkbutton(opciones_frame, text="📤 Subir a GitHub (TODO: app.py + version.json + EXE + Instalador)", variable=self.upload_var).pack(anchor="w")
         
         self.installer_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(opciones_frame, text="📦 Crear instalador profesional", variable=self.installer_var).pack(anchor="w")
+        ttk.Checkbutton(opciones_frame, text="📦 Crear instalador profesional (COMPLETO)", variable=self.installer_var).pack(anchor="w")
         
         self.auto_install_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(opciones_frame, text="🔧 Instalar librerías automáticamente", variable=self.auto_install_var).pack(anchor="w")
@@ -241,9 +239,67 @@ class BuildDeployPro:
             self.log(f"⚠️ Error: {e}", "warning")
             return []
     
+    # ===== LIMPIAR CONFLICTOS DE GIT AUTOMÁTICAMENTE =====
+    def limpiar_conflictos_git(self):
+        """Limpia automáticamente los conflictos de Git en app.py"""
+        try:
+            carpeta = self.ruta_app.get()
+            ruta_app = os.path.join(carpeta, "app.py")
+            
+            if not os.path.exists(ruta_app):
+                return True
+            
+            with open(ruta_app, "r", encoding="utf-8") as f:
+                contenido = f.read()
+            
+            if '<<<<<<<' not in contenido and '>>>>>>>' not in contenido:
+                self.log("ℹ️ No hay conflictos de Git en app.py", "info")
+                return True
+            
+            lineas = contenido.split('\n')
+            lineas_limpias = []
+            skip = False
+            conflictos_eliminados = 0
+            
+            for linea in lineas:
+                if linea.startswith('<<<<<<< HEAD'):
+                    skip = True
+                    conflictos_eliminados += 1
+                    continue
+                elif linea.startswith('======='):
+                    continue
+                elif linea.startswith('>>>>>>>'):
+                    skip = False
+                    continue
+                
+                if not skip:
+                    lineas_limpias.append(linea)
+            
+            nuevo_contenido = '\n'.join(lineas_limpias)
+            
+            if nuevo_contenido != contenido:
+                with open(ruta_app, "w", encoding="utf-8") as f:
+                    f.write(nuevo_contenido)
+                self.log(f"✅ Conflictos de Git limpiados en app.py ({conflictos_eliminados} conflictos)", "success")
+                
+                try:
+                    subprocess.run(["git", "add", "app.py"], cwd=carpeta, check=True, capture_output=True)
+                    self.log("✅ app.py marcado como resuelto en Git", "success")
+                except:
+                    pass
+                
+                return True
+            else:
+                self.log("ℹ️ No había conflictos de Git en app.py", "info")
+                return True
+                
+        except Exception as e:
+            self.log(f"⚠️ Error al limpiar conflictos: {e}", "warning")
+            return False
+    
     # ===== Sincronizar con GitHub AUTOMÁTICAMENTE =====
     def git_sync(self):
-        """Sincroniza automáticamente con GitHub (pull + commit + push)"""
+        """Sincroniza automáticamente con GitHub (pull)"""
         try:
             carpeta = self.ruta_app.get()
             
@@ -270,6 +326,9 @@ class BuildDeployPro:
                 self.log("ℹ️ Ya estás al día con GitHub", "info")
             else:
                 self.log("✅ Cambios descargados de GitHub", "success")
+            
+            # 4. Limpiar conflictos automáticamente después del pull
+            self.limpiar_conflictos_git()
             
             return True
             
@@ -434,41 +493,56 @@ class BuildDeployPro:
             return False
     
     def crear_instalador_profesional(self, nueva_version):
-        """Crea un instalador profesional con múltiples idiomas y todos los archivos"""
+        """Crea un instalador profesional COMPLETO con todos los archivos necesarios"""
         try:
             if not self.installer_var.get():
                 return True
             
-            self.log("📦 Creando instalador profesional...", "info")
+            self.log("📦 Creando instalador profesional COMPLETO...", "info")
             self.progreso.set(80)
             
             carpeta = self.ruta_app.get()
-            exe_path = os.path.join(carpeta, "dist", "RenombradorPDF.exe")
             
-            if not os.path.exists(exe_path):
-                self.log("❌ No se encontró el EXE", "error")
+            # ===== ARCHIVOS QUE DEBE INCLUIR EL INSTALADOR =====
+            archivos_necesarios = [
+                ("dist", "RenombradorPDF.exe"),
+                ("", "version.json"),
+                ("", "fondo_iess.png"),
+                ("", "fondo_issfa.png"),
+                ("", "tu_icono.ico")
+            ]
+            
+            # Verificar que todos los archivos existen
+            archivos_faltantes = []
+            for subdir, archivo in archivos_necesarios:
+                if subdir:
+                    ruta = os.path.join(carpeta, subdir, archivo)
+                else:
+                    ruta = os.path.join(carpeta, archivo)
+                
+                if not os.path.exists(ruta):
+                    archivos_faltantes.append(archivo)
+            
+            if archivos_faltantes:
+                self.log(f"❌ Archivos faltantes para el instalador: {', '.join(archivos_faltantes)}", "error")
                 return False
             
             # Crear carpeta para archivos del instalador
             installer_files = os.path.join(carpeta, "Installer_Files")
             os.makedirs(installer_files, exist_ok=True)
             
-            # Copiar archivos necesarios
-            shutil.copy(exe_path, os.path.join(installer_files, "RenombradorPDF.exe"))
+            # ===== COPIAR TODOS LOS ARCHIVOS =====
+            for subdir, archivo in archivos_necesarios:
+                if subdir:
+                    src = os.path.join(carpeta, subdir, archivo)
+                else:
+                    src = os.path.join(carpeta, archivo)
+                
+                dst = os.path.join(installer_files, archivo)
+                shutil.copy(src, dst)
+                self.log(f"✅ {archivo} copiado al instalador", "success")
             
-            # Copiar version.json
-            json_path = os.path.join(carpeta, "version.json")
-            if os.path.exists(json_path):
-                shutil.copy(json_path, os.path.join(installer_files, "version.json"))
-            
-            # Copiar imágenes
-            for img in ["fondo_iess.png", "fondo_issfa.png", "tu_icono.ico"]:
-                src = os.path.join(carpeta, img)
-                if os.path.exists(src):
-                    shutil.copy(src, os.path.join(installer_files, img))
-                    self.log(f"✅ {img} copiado", "success")
-            
-            # Script de Inno Setup
+            # ===== SCRIPT DE INNO SETUP COMPLETO =====
             self.log("📝 Generando script de Inno Setup...", "info")
             
             # Idiomas
@@ -483,9 +557,17 @@ class BuildDeployPro:
             # AppId con escape correcto
             app_id = f"{{{{{self.nombre_app}-{nueva_version.replace('.', '-')}-PRO}}}}"
             
+            # Rutas para el instalador (escapadas para Inno Setup)
+            exe_dest = os.path.join(installer_files, "RenombradorPDF.exe")
+            json_dest = os.path.join(installer_files, "version.json")
+            iess_dest = os.path.join(installer_files, "fondo_iess.png")
+            issfa_dest = os.path.join(installer_files, "fondo_issfa.png")
+            icon_dest = os.path.join(installer_files, "tu_icono.ico")
+            
             iss_content = f'''
-; Script de instalación para ICAMP
+; Script de instalación COMPLETO para ICAMP
 ; Versión: {nueva_version}
+; Incluye TODOS los archivos necesarios
 
 [Setup]
 AppId={app_id}
@@ -500,7 +582,7 @@ DefaultGroupName={self.nombre_app}
 AllowNoIcons=yes
 OutputDir={carpeta}\\Installer_PRO
 OutputBaseFilename=ICAMP_Setup_{nueva_version}
-SetupIconFile={os.path.join(installer_files, "tu_icono.ico")}
+SetupIconFile={icon_dest}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -513,20 +595,24 @@ UninstallDisplayName={self.nombre_app} {nueva_version}
 [Tasks]
 Name: "desktopicon"; Description: "{{cm:CreateDesktopIcon}}"; GroupDescription: "{{cm:AdditionalIcons}}"; Flags: unchecked
 
+; ===== ARCHIVOS DEL INSTALADOR (TODOS LOS NECESARIOS) =====
 [Files]
-Source: "{os.path.join(installer_files, "RenombradorPDF.exe")}"; DestDir: "{{app}}"; Flags: ignoreversion
-Source: "{os.path.join(installer_files, "version.json")}"; DestDir: "{{app}}"; Flags: ignoreversion
-Source: "{os.path.join(installer_files, "fondo_iess.png")}"; DestDir: "{{app}}"; Flags: ignoreversion
-Source: "{os.path.join(installer_files, "fondo_issfa.png")}"; DestDir: "{{app}}"; Flags: ignoreversion
+Source: "{exe_dest}"; DestDir: "{{app}}"; Flags: ignoreversion
+Source: "{json_dest}"; DestDir: "{{app}}"; Flags: ignoreversion
+Source: "{iess_dest}"; DestDir: "{{app}}"; Flags: ignoreversion
+Source: "{issfa_dest}"; DestDir: "{{app}}"; Flags: ignoreversion
 
+; ===== ACCESOS DIRECTOS =====
 [Icons]
 Name: "{{group}}\\{self.nombre_app}"; Filename: "{{app}}\\RenombradorPDF.exe"
 Name: "{{group}}\\Desinstalar {self.nombre_app}"; Filename: "{{uninstallexe}}"
 Name: "{{autodesktop}}\\{self.nombre_app}"; Filename: "{{app}}\\RenombradorPDF.exe"; Tasks: desktopicon
 
+; ===== EJECUCIÓN POST-INSTALACIÓN =====
 [Run]
 Filename: "{{app}}\\RenombradorPDF.exe"; Description: "{{cm:LaunchProgram,{self.nombre_app}}}"; Flags: postinstall nowait skipifsilent
 
+; ===== MENSAJES PERSONALIZADOS =====
 [Messages]
 SpanishWelcomeLabel1=Bienvenido al instalador de {self.nombre_app}
 SpanishWelcomeLabel2=Este programa instalará {self.nombre_app} versión {nueva_version} en tu sistema.
@@ -570,12 +656,13 @@ EnglishReadyLabel2=The program is ready to be installed on your system.
                 self.log(resultado.stderr, "error")
                 return False
             
-            self.log("✅ Instalador profesional creado exitosamente!", "success")
+            self.log("✅ Instalador profesional COMPLETO creado exitosamente!", "success")
             
             installer_path = os.path.join(carpeta, "Installer_PRO", f"ICAMP_Setup_{nueva_version}.exe")
             if os.path.exists(installer_path):
                 size = os.path.getsize(installer_path) / (1024*1024)
                 self.log(f"📦 Instalador: {installer_path} ({size:.2f} MB)", "success")
+                self.log(f"📦 Incluye: EXE + version.json + imágenes", "success")
             
             return True
             
@@ -584,52 +671,87 @@ EnglishReadyLabel2=The program is ready to be installed on your system.
             return False
     
     def subir_a_github_automatico(self, nueva_version):
-        """Sube TODO automáticamente a GitHub usando gh CLI"""
+        """Sube TODO automáticamente a GitHub: EXE + INSTALADOR + app.py + version.json"""
         try:
             if not self.upload_var.get():
                 self.log("⏭️ Subida a GitHub omitida", "warning")
                 return True
             
             carpeta = self.ruta_app.get()
-            exe_path = os.path.join(carpeta, "dist", "RenombradorPDF.exe")
             
+            # ===== ARCHIVOS A SUBIR =====
+            exe_path = os.path.join(carpeta, "dist", "RenombradorPDF.exe")
+            installer_path = os.path.join(carpeta, "Installer_PRO", f"ICAMP_Setup_{nueva_version}.exe")
+            
+            # Verificar que existen los archivos
+            archivos_faltantes = []
             if not os.path.exists(exe_path):
-                self.log("❌ No se encontró el EXE", "error")
+                archivos_faltantes.append("EXE")
+            if not os.path.exists(installer_path):
+                archivos_faltantes.append("Instalador")
+            
+            if archivos_faltantes:
+                self.log(f"❌ No se encontraron: {', '.join(archivos_faltantes)}", "error")
                 return False
             
-            self.log("📤 Subiendo a GitHub automáticamente...", "github")
-            self.progreso.set(60)
+            self.log("📤 Subiendo TODO a GitHub automáticamente...", "github")
+            self.log("📦 Archivos a subir:", "info")
+            self.log(f"   📄 app.py", "info")
+            self.log(f"   📄 version.json", "info")
+            self.log(f"   📦 {os.path.basename(exe_path)} ({os.path.getsize(exe_path) / (1024*1024):.2f} MB)", "info")
+            self.log(f"   📦 {os.path.basename(installer_path)} ({os.path.getsize(installer_path) / (1024*1024):.2f} MB)", "info")
+            self.progreso.set(85)
             
-            # Crear release y subir EXE
-            self.log("📤 Subiendo EXE a GitHub Releases...", "github")
+            # ===== PASO 1: Subir app.py y version.json (ya se hizo en git_push_changes) =====
+            self.log("📤 app.py y version.json ya subidos en paso anterior", "github")
+            
+            # ===== PASO 2: Subir EXE e Instalador a GitHub Releases =====
+            self.log("📤 Subiendo EXE e Instalador a GitHub Releases...", "github")
             tag = f"v{nueva_version}"
             
+            # Verificar si el release ya existe
             check_cmd = ["gh", "release", "view", tag, "--repo", self.github_repo]
             check_result = subprocess.run(check_cmd, capture_output=True, text=True)
             
             if check_result.returncode == 0:
-                self.log(f"⚠️ Release {tag} ya existe, actualizando...", "warning")
-                assets_cmd = ["gh", "release", "delete-asset", tag, "RenombradorPDF.exe", 
-                             "--repo", self.github_repo, "--yes"]
-                subprocess.run(assets_cmd, capture_output=True)
-                upload_cmd = ["gh", "release", "upload", tag, exe_path, "--repo", self.github_repo, "--clobber"]
-                subprocess.run(upload_cmd, check=True, capture_output=True)
-                self.log(f"✅ EXE actualizado en release {tag}", "success")
+                # Release existe - actualizar assets
+                self.log(f"⚠️ Release {tag} ya existe, actualizando assets...", "warning")
+                
+                # Eliminar assets existentes
+                for archivo in [exe_path, installer_path]:
+                    nombre = os.path.basename(archivo)
+                    delete_cmd = ["gh", "release", "delete-asset", tag, nombre, "--repo", self.github_repo, "--yes"]
+                    subprocess.run(delete_cmd, capture_output=True)
+                
+                # Subir nuevos assets
+                for archivo in [exe_path, installer_path]:
+                    nombre = os.path.basename(archivo)
+                    upload_cmd = ["gh", "release", "upload", tag, archivo, "--repo", self.github_repo, "--clobber"]
+                    subprocess.run(upload_cmd, check=True, capture_output=True)
+                    self.log(f"✅ {nombre} actualizado en release", "success")
             else:
+                # Crear nuevo release con todos los archivos
+                self.log(f"📤 Creando release {tag}...", "github")
+                
                 cmd = [
                     "gh", "release", "create",
                     tag,
                     exe_path,
+                    installer_path,
                     "--repo", self.github_repo,
                     "--title", f"Versión {nueva_version}",
                     "--notes", self.mensaje_cambios.get() or f"Versión {nueva_version}",
                     "--latest"
                 ]
                 subprocess.run(cmd, check=True, capture_output=True)
-                self.log(f"✅ Release {tag} creado con EXE", "success")
+                self.log(f"✅ Release {tag} creado con EXE + Instalador", "success")
             
-            self.progreso.set(70)
+            self.progreso.set(95)
             self.log("✅ ¡TODO SUBIDO A GITHUB AUTOMÁTICAMENTE! 🎉", "success")
+            self.log(f"📌 app.py y version.json actualizados", "success")
+            self.log(f"📌 EXE subido a Releases", "success")
+            self.log(f"📌 Instalador COMPLETO subido a Releases", "success")
+            
             return True
             
         except Exception as e:
@@ -681,19 +803,20 @@ EnglishReadyLabel2=The program is ready to be installed on your system.
                     raise Exception("Error al compilar EXE")
                 self.progreso.set(50)
                 
-                # 4. Crear instalador profesional
-                self.log("📦 Creando instalador profesional...", "info")
+                # 4. Crear instalador profesional COMPLETO
+                self.log("📦 Creando instalador profesional COMPLETO...", "info")
                 if not self.crear_instalador_profesional(nueva_version):
                     self.log("⚠️ Error al crear instalador", "warning")
-                self.progreso.set(80)
+                self.progreso.set(75)
                 
-                # ===== PASO 5: Subir cambios a GitHub (commit + push) =====
+                # ===== PASO 5: Subir TODO a GitHub =====
                 if self.upload_var.get():
-                    self.log("📤 Subiendo cambios a GitHub...", "github")
+                    self.log("📤 Subiendo TODO a GitHub...", "github")
+                    
+                    # 5a. Subir app.py y version.json (commit + push)
                     self.git_push_changes(nueva_version)
                     
-                    # 6. Subir EXE a Releases
-                    self.log("📤 Subiendo EXE a GitHub Releases...", "github")
+                    # 5b. Subir EXE + Instalador a Releases
                     self.subir_a_github_automatico(nueva_version)
                 self.progreso.set(95)
                 
@@ -701,6 +824,9 @@ EnglishReadyLabel2=The program is ready to be installed on your system.
                 self.progreso.set(100)
                 self.log("✅ ¡PROCESO COMPLETADO EXITOSAMENTE! 🎉", "success")
                 self.log(f"📌 Nueva versión: {nueva_version}", "success")
+                self.log(f"📌 app.py y version.json actualizados en GitHub", "success")
+                self.log(f"📌 EXE subido a GitHub Releases", "success")
+                self.log(f"📌 Instalador COMPLETO subido a GitHub Releases", "success")
                 self.root.after(0, lambda: self.build_btn.config(state="normal"))
                 
                 messagebox.showinfo(
@@ -710,7 +836,16 @@ EnglishReadyLabel2=The program is ready to be installed on your system.
                     f"📂 EXE: {self.ruta_app.get()}\\dist\\RenombradorPDF.exe\n"
                     f"📦 Instalador: {self.ruta_app.get()}\\Installer_PRO\\ICAMP_Setup_{nueva_version}.exe\n"
                     f"🔗 GitHub: https://github.com/{self.github_repo}/releases\n\n"
-                    f"✅ app.py y version.json actualizados en GitHub\n"
+                    f"📤 SUBIDO A GITHUB:\n"
+                    f"   ✅ app.py\n"
+                    f"   ✅ version.json\n"
+                    f"   ✅ RenombradorPDF.exe\n"
+                    f"   ✅ ICAMP_Setup_{nueva_version}.exe (COMPLETO)\n\n"
+                    f"📦 EL INSTALADOR INCLUYE:\n"
+                    f"   ✅ RenombradorPDF.exe\n"
+                    f"   ✅ version.json\n"
+                    f"   ✅ fondo_iess.png\n"
+                    f"   ✅ fondo_issfa.png\n"
                     f"🌐 Idiomas: {'Español, ' if self.idioma_es.get() else ''}{'Inglés' if self.idioma_en.get() else ''}"
                 )
                 
