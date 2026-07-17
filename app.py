@@ -52,7 +52,7 @@ class Actualizador:
     
     # ===== ⚙️ CONFIGURACIÓN =====
     URL_VERSION = "https://raw.githubusercontent.com/Mrsys-creator/ICAMP/refs/heads/main/version.json"
-    VERSION_ACTUAL = "1.0.7"
+    VERSION_ACTUAL = "1.0.8"
     NOMBRE_APP = "_IC@MP_"
     
     @staticmethod
