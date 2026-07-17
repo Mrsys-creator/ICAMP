@@ -67,7 +67,7 @@ class Actualizador:
                 data = json.loads(response.read().decode('utf-8'))
             
             version_remota = data.get("version", "0.0.0")
-            url_descarga = data.get("app_url", "")
+            url_descarga = data.get("url_descarga", "")
             mensaje = data.get("mensaje", "Nueva versión disponible")
             
             if Actualizador._es_version_mayor(version_remota, Actualizador.VERSION_ACTUAL):
