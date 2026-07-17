@@ -48,12 +48,12 @@ from collections import defaultdict
 # ============================================
 
 class Actualizador:
-    """Maneja las actualizaciones automáticas del programa"""
-    
-    # ===== ⚙️ CONFIGURACIÓN =====
-    URL_VERSION = "https://raw.githubusercontent.com/Mrsys-creator/ICAMP/refs/heads/main/version.json"
+    URL_VERSION = "https://raw.githubusercontent.com/Mrsys-creator/ICAMP/main/version.json"
     VERSION_ACTUAL = "1.0.8"
     NOMBRE_APP = "_IC@MP_"
+    
+    # ===== URL DE DESCARGA POR DEFECTO =====
+    URL_DESCARGA_DEFAULT = "https://github.com/Mrsys-creator/ICAMP/releases/download/v{version}/RenombradorPDF.exe"
     
     @staticmethod
     def verificar_actualizacion(parent=None):
@@ -70,13 +70,17 @@ class Actualizador:
             url_descarga = data.get("url_descarga", "")
             mensaje = data.get("mensaje", "Nueva versión disponible")
             
+            # ===== SI NO HAY URL, USAR LA DEFAULT =====
+            if not url_descarga:
+                url_descarga = Actualizador.URL_DESCARGA_DEFAULT.format(version=version_remota)
+                print(f"📌 Usando URL por defecto: {url_descarga}")
+            
             if Actualizador._es_version_mayor(version_remota, Actualizador.VERSION_ACTUAL):
                 respuesta = messagebox.askyesno(
                     f"📦 {Actualizador.NOMBRE_APP} - Actualización disponible",
                     f"🔔 Nueva versión **{version_remota}** disponible.\n\n"
                     f"📌 Cambios:\n{mensaje}\n\n"
-                    f"¿Deseas descargar e instalar la actualización ahora?\n\n"
-                    f"(El programa se reiniciará automáticamente)"
+                    f"¿Deseas descargar e instalar la actualización ahora?"
                 )
                 
                 if respuesta:
